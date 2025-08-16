@@ -8,6 +8,10 @@ A simple web app to fetch YouTube transcripts, summarize them with an LLM, and l
 - Generate concise summaries using an LLM
 - Write and persist your own notes
 
+![Screenshot of YouTube Note main homescreen](docs/home.png)
+
+![Screenshot of video summary](docs/summary-detail.png)
+
 ### Tech Stack
 
 - Backend: `FastAPI`, `SQLModel` (SQLite), `Jinja2`

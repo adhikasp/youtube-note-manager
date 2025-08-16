@@ -69,7 +69,7 @@ llm = init_chat_model(
     api_key=os.getenv("openrouter_api_key"),
 )
 prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant that summarizes transcripts of YouTube videos. Your response are to be rendered in a Youtube Note Manager application, so skip preamble and followup question, just the main content itself. Use Markdown format. Write in an easy to read and digest manner."),
+    ("system", "You are a helpful assistant that summarizes transcripts of YouTube videos. Your response are to be rendered in a Youtube Note Manager application, so skip preamble and followup question, just the main content itself. Use Markdown format. Write in an easy to read and digest manner. Prioritize readability over succinctness."),
     ("user", "{transcript}")
 ])
 class ChainWrapper:
