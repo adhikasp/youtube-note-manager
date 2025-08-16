@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Notes Manager</title>
+    
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@2.0.6"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.6/dist/ext/json-enc.js"></script>
+    
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
+    <!-- DOMPurify for sanitizing parsed Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    
+    <style>
+        .content-section {
+            overflow-y: auto;
+            white-space: normal;
+            line-height: 1.5;
+        }
+        .whitespace-prewrap {
+            white-space: pre-wrap;
+        }
+        .transcript-content {
+            max-height: 360px;
+        }
+        .transcript-collapsed {
+            max-height: 200px;
+            overflow: hidden;
+        }
+        .transcript-expanded {
+            max-height: none;
+        }
+        .markdown-content p {
+            margin-bottom: 0.5rem;
+        }
+        .markdown-content ul,
+        .markdown-content ol {
+            margin-bottom: 0.75rem;
+            padding-left: 1.25rem;
+        }
+        .markdown-content li {
+            margin-bottom: 0.25rem;
+        }
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4,
+        .markdown-content h5,
+        .markdown-content h6 {
+            margin-top: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .youtube-url {
+            word-break: break-all;
+        }
+        .card {
+            transition: box-shadow 0.15s ease-in-out;
+        }
+        .card:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        .note-tools .btn {
+            padding: 0.25rem 0.5rem;
+        }
+        .yt-thumb {
+            width: 100px;
+            height: 56px;
+            object-fit: cover;
+            border-radius: 0.25rem;
+        }
+        .fade-out-mask {
+            position: relative;
+        }
+        .fade-out-mask::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 48px;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), var(--bs-body-bg));
+            pointer-events: none;
+        }
+        .show-more-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .search-input {
+            max-width: 420px;
+        }
+        .scroll-top-btn {
+            position: fixed;
+            right: 1rem;
+            bottom: 1rem;
+            z-index: 1040;
+            display: none;
+        }
+        /* Ensure toggler icon visible in custom themes */
+        .navbar .navbar-toggler-icon { filter: var(--_navbar-toggler-filter, none); }
+        [data-bs-theme="dark"] .navbar .navbar-toggler-icon { filter: invert(1) grayscale(1); }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg border-bottom" id="mainNavbar">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+                <i class="bi bi-youtube text-danger"></i>
+                <span>YouTube Notes</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <div class="ms-auto d-flex align-items-center gap-3">
+                    <div class="input-group search-input">
+                        <span class="input-group-text" id="search-addon"><i class="bi bi-search"></i></span>
+                        <input type="search" class="form-control" id="searchInput" placeholder="Search notes..." aria-label="Search notes" aria-describedby="search-addon">
+                    </div>
+                    <div class="form-check form-switch d-flex align-items-center" title="Toggle theme">
+                        <input class="form-check-input" type="checkbox" role="switch" id="themeToggle">
+                        <label class="form-check-label" for="themeToggle"><i class="bi bi-moon-stars"></i></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-4 text-center mb-4">
+                    <i class="bi bi-youtube text-danger"></i>
+                    YouTube Notes Manager
+                </h1>
+            </div>
+        </div>
+
+        <!-- Form Section -->
+        <div class="row mb-5">
+            <div class="col-lg-8 col-xl-6 mx-auto">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-plus-circle"></i>
+                            Add New YouTube Video
+                        </h5>
+                        <form id="transcript-form" hx-post="/transcript" hx-target="#transcript-list" hx-swap="afterbegin" hx-ext="json-enc">
+                            <div class="mb-3">
+                                <label for="youtube-url" class="form-label">YouTube URL:</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="youtube-url" 
+                                       name="youtube_url" 
+                                       placeholder="https://www.youtube.com/watch?v=..." 
+                                       required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" id="submit-btn">
+                                <span class="spinner-border spinner-border-sm me-2 d-none" id="submit-spinner" role="status" aria-hidden="true"></span>
+                                <i class="bi bi-download" id="submit-icon"></i>
+                                <span class="btn-text">Get Transcript & Generate Notes</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes List -->
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <div>
+                        <span class="badge text-bg-secondary" id="noteCount" aria-live="polite"></span>
+                    </div>
+                </div>
+                <div id="transcript-list">
+                    {% if notes and notes|length > 0 %}
+                        {% for note in notes %}
+                        {% include '_note_card.html' %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <p class="mb-1"><i class="bi bi-collection-play"></i> No notes yet</p>
+                            <p class="small">Paste a YouTube URL above to get started.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Theme handling
+        (function() {
+            try {
+                var savedTheme = localStorage.getItem('theme');
+                var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var theme = savedTheme || (prefersDark ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            } catch (e) {}
+        })();
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            try { localStorage.setItem('theme', theme); } catch(e) {}
+        }
+
+        htmx.on('#transcript-form', 'htmx:beforeRequest', function(event) {
+            var form = htmx.find('#transcript-form');
+            var submitBtn = htmx.find('#submit-btn');
+            var spinner = htmx.find('#submit-spinner');
+            var icon = htmx.find('#submit-icon');
+            var btnText = submitBtn ? submitBtn.querySelector('.btn-text') : null;
+
+            if (form) form.setAttribute('aria-busy', 'true');
+            if (submitBtn) submitBtn.disabled = true;
+            if (icon) icon.classList.add('d-none');
+            if (spinner) spinner.classList.remove('d-none');
+            if (btnText) btnText.textContent = 'Processing...';
+        });
+
+        htmx.on('#transcript-form', 'htmx:afterRequest', function(event) {
+            // Reset loading state regardless of success
+            var form = htmx.find('#transcript-form');
+            var submitBtn = htmx.find('#submit-btn');
+            var spinner = htmx.find('#submit-spinner');
+            var icon = htmx.find('#submit-icon');
+            var btnText = submitBtn ? submitBtn.querySelector('.btn-text') : null;
+
+            if (form) form.removeAttribute('aria-busy');
+            if (submitBtn) submitBtn.disabled = false;
+            if (icon) icon.classList.remove('d-none');
+            if (spinner) spinner.classList.add('d-none');
+            if (btnText) btnText.textContent = 'Get Transcript & Generate Notes';
+
+            if (event.detail.successful) {
+                // Clear the form
+                htmx.find('#youtube-url').value = '';
+            }
+        });
+
+        function renderAllMarkdown(scope) {
+            (scope || document).querySelectorAll('.markdown-content').forEach(function(element) {
+                var parsed = marked.parse(element.textContent || '');
+                element.innerHTML = DOMPurify.sanitize(parsed);
+            });
+        }
+
+        function updateNoteCount() {
+            var countBadge = document.getElementById('noteCount');
+            if (!countBadge) return;
+            var visibleCards = Array.from(document.querySelectorAll('#transcript-list .card')).filter(function(c) { return c.style.display !== 'none'; }).length;
+            countBadge.textContent = visibleCards + ' ' + (visibleCards === 1 ? 'video' : 'videos');
+        }
+
+        // Re-parse markdown when content is swapped in by HTMX
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.target && evt.target.id === 'transcript-list') {
+                setupNoteCards(evt.target);
+                renderAllMarkdown(evt.target);
+                updateNoteCount();
+
+                // Auto-focus and expand the newly added note; collapse others
+                var firstCard = evt.target.querySelector('.card');
+                if (firstCard) {
+                    // Collapse any other open notes
+                    document.querySelectorAll('#transcript-list .collapse.show').forEach(function(openEl) {
+                        if (!firstCard.contains(openEl)) {
+                            try { new bootstrap.Collapse(openEl, { toggle: false }).hide(); } catch (e) {}
+                        }
+                    });
+                    // Expand the new note
+                    var collapseEl = firstCard.querySelector('[id^="collapse-note-"]');
+                    if (collapseEl) {
+                        try { new bootstrap.Collapse(collapseEl, { toggle: false }).show(); } catch (e) {}
+                    }
+                    // Prefer showing Notes tab if it contains content, else keep Summary
+                    try {
+                        var notesPane = firstCard.querySelector('[id^="notes-"] .content-section');
+                        var hasUserNotes = notesPane && notesPane.textContent && notesPane.textContent.trim() && notesPane.textContent.trim().toLowerCase() !== 'no notes available yet.';
+                        if (hasUserNotes) {
+                            var notesTabBtn = firstCard.querySelector('[data-bs-target^="#notes-"]');
+                            if (notesTabBtn && bootstrap.Tab) { new bootstrap.Tab(notesTabBtn).show(); }
+                        }
+                    } catch (e) {}
+                    // Focus and scroll into view
+                    firstCard.setAttribute('tabindex', '-1');
+                    try { firstCard.focus({ preventScroll: true }); } catch (e) { try { firstCard.focus(); } catch (e2) {} }
+                    firstCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    setTimeout(function() { firstCard.removeAttribute('tabindex'); }, 1000);
+                }
+            }
+        });
+
+        renderAllMarkdown(document);
+
+        // Theme toggle binding
+        var themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            try {
+                var currentTheme = document.documentElement.getAttribute('data-bs-theme');
+                themeToggle.checked = currentTheme === 'dark';
+            } catch(e) {}
+            themeToggle.addEventListener('change', function() {
+                setTheme(themeToggle.checked ? 'dark' : 'light');
+            });
+        }
+
+        // Search filtering
+        var searchInput = document.getElementById('searchInput');
+        function applySearchFilter() {
+            var q = (searchInput && searchInput.value || '').trim().toLowerCase();
+            var cards = document.querySelectorAll('#transcript-list .card');
+            cards.forEach(function(card) {
+                var txt = card.textContent.toLowerCase();
+                var match = q === '' || txt.indexOf(q) !== -1;
+                card.style.display = match ? '' : 'none';
+            });
+            updateNoteCount();
+        }
+        if (searchInput) {
+            searchInput.addEventListener('input', applySearchFilter);
+        }
+
+        // Per-card setup: collapse icons, header click, thumbnails, copy buttons, show-more
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            try {
+                var u = new URL(url);
+                if (u.hostname.includes('youtu.be')) {
+                    return u.pathname.split('/').filter(Boolean)[0] || null;
+                }
+                if (u.searchParams.get('v')) {
+                    return u.searchParams.get('v');
+                }
+                // Fallback simple regex
+                var m = url.match(/[?&]v=([^&#]+)/);
+                return m ? m[1] : null;
+            } catch (e) {
+                var m2 = url.match(/youtu\.be\/([\w-]+)/);
+                if (m2) return m2[1];
+                var m3 = url.match(/[?&]v=([^&#]+)/);
+                return m3 ? m3[1] : null;
+            }
+        }
+
+        function setupNoteCards(scope) {
+            var root = scope || document;
+            // Collapse icon updates and header click area
+            root.querySelectorAll('[id^="collapse-note-"]').forEach(function(collapseEl) {
+                collapseEl.addEventListener('shown.bs.collapse', function() {
+                    var btn = root.querySelector('[data-bs-target="#' + collapseEl.id + '"]');
+                    if (!btn) return;
+                    var icon = btn.querySelector('i');
+                    if (icon) {
+                        icon.classList.add('bi-chevron-down');
+                        icon.classList.remove('bi-chevron-right');
+                    }
+                });
+                collapseEl.addEventListener('hidden.bs.collapse', function() {
+                    var btn = root.querySelector('[data-bs-target="#' + collapseEl.id + '"]');
+                    if (!btn) return;
+                    var icon = btn.querySelector('i');
+                    if (icon) {
+                        icon.classList.add('bi-chevron-right');
+                        icon.classList.remove('bi-chevron-down');
+                    }
+                });
+            });
+            // Thumbnails
+            root.querySelectorAll('.yt-thumb[data-url]').forEach(function(img) {
+                if (img.dataset.loaded === '1') return;
+                var id = extractYouTubeId(img.getAttribute('data-url'));
+                if (id) {
+                    img.src = 'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg';
+                    img.dataset.loaded = '1';
+                }
+            });
+            // Copy buttons
+            root.querySelectorAll('[data-copy-target]').forEach(function(btn) {
+                if (btn.dataset.bound === '1') return;
+                btn.addEventListener('click', function() {
+                    var sel = btn.getAttribute('data-copy-target');
+                    var el = btn.closest('.card').querySelector(sel);
+                    var text = el ? el.textContent : '';
+                    navigator.clipboard.writeText(text).then(function() { showToast('Copied to clipboard'); });
+                });
+                btn.dataset.bound = '1';
+            });
+            // Show more toggles in transcript
+            root.querySelectorAll('[data-toggle-more]').forEach(function(btn) {
+                if (btn.dataset.bound === '1') return;
+                btn.addEventListener('click', function() {
+                    var targetSel = btn.getAttribute('data-toggle-more');
+                    var target = btn.closest('.tab-pane').querySelector(targetSel);
+                    if (!target) return;
+                    var expanded = target.classList.toggle('transcript-expanded');
+                    if (expanded) {
+                        target.classList.remove('transcript-collapsed', 'fade-out-mask');
+                        btn.innerHTML = '<i class="bi bi-chevron-up"></i> Show less';
+                    } else {
+                        target.classList.add('transcript-collapsed', 'fade-out-mask');
+                        btn.innerHTML = '<i class="bi bi-chevron-down"></i> Show more';
+                    }
+                });
+                btn.dataset.bound = '1';
+            });
+        }
+
+        // Simple Bootstrap toast
+        function showToast(message) {
+            var container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container position-fixed bottom-0 start-50 translate-middle-x p-3';
+                document.body.appendChild(container);
+            }
+            var el = document.createElement('div');
+            el.className = 'toast align-items-center text-bg-primary border-0';
+            el.setAttribute('role', 'status');
+            el.setAttribute('aria-live', 'polite');
+            el.setAttribute('aria-atomic', 'true');
+            el.innerHTML = '<div class="d-flex"><div class="toast-body">' + message + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>';
+            container.appendChild(el);
+            var toast = new bootstrap.Toast(el, { delay: 1500 });
+            toast.show();
+            el.addEventListener('hidden.bs.toast', function() { el.remove(); });
+        }
+
+        // Scroll-to-top
+        (function setupScrollTop() {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-primary scroll-top-btn';
+            btn.id = 'scrollTopBtn';
+            btn.innerHTML = '<i class="bi bi-arrow-up"></i>';
+            document.body.appendChild(btn);
+            btn.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+            window.addEventListener('scroll', function() {
+                btn.style.display = window.scrollY > 300 ? 'inline-flex' : 'none';
+            });
+        })();
+
+        // Initial setup
+        setupNoteCards(document);
+        updateNoteCount();
+        applySearchFilter();
+    </script>
+</body>
+</html>

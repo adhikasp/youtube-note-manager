@@ -1,0 +1,96 @@
+<div class="card mb-4 shadow-sm" data-note-id="{{ note.id }}">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <img class="yt-thumb" alt="thumbnail" data-url="{{ note.youtube_url }}" loading="lazy" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='56'/>">
+                <div>
+                    <h5 class="mb-0">
+                        <i class="bi bi-youtube text-danger"></i>
+                        {% if note.title %}{{ note.title }}{% else %}Video #{{ note.id }}{% endif %}
+                    </h5>
+                    <div class="youtube-url small text-muted mt-1">
+                        <a href="{{ note.youtube_url }}" target="_blank" class="text-decoration-none">
+                            {{ note.youtube_url }}
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2 note-tools">
+                <small class="text-muted">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" data-copy-target=".markdown-content" title="Copy summary">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-note-{{ note.id }}" aria-expanded="false" aria-controls="collapse-note-{{ note.id }}" title="Toggle details">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="collapse-note-{{ note.id }}" class="collapse">
+        <div class="card-body">
+            <ul class="nav nav-tabs" id="tabs-{{ note.id }}" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active"
+                            id="summary-tab-{{ note.id }}"
+                            data-bs-toggle="tab"
+                            data-bs-target="#summary-{{ note.id }}"
+                            type="button"
+                            role="tab">
+                        <i class="bi bi-card-text"></i>
+                        Summary
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link"
+                            id="notes-tab-{{ note.id }}"
+                            data-bs-toggle="tab"
+                            data-bs-target="#notes-{{ note.id }}"
+                            type="button"
+                            role="tab">
+                        <i class="bi bi-journal-text"></i>
+                        Notes
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link"
+                            id="transcript-tab-{{ note.id }}"
+                            data-bs-toggle="tab"
+                            data-bs-target="#transcript-{{ note.id }}"
+                            type="button"
+                            role="tab">
+                        <i class="bi bi-file-text"></i>
+                        Transcript
+                    </button>
+                </li>
+            </ul>
+            <div class="tab-content mt-3" id="tabContent-{{ note.id }}">
+                <div class="tab-pane fade"
+                     id="transcript-{{ note.id }}"
+                     role="tabpanel">
+                    <div class="content-section whitespace-prewrap p-3 rounded transcript-content transcript-collapsed fade-out-mask">{{ note.transcript }}</div>
+                    <button class="btn btn-sm btn-outline-secondary mt-2 show-more-btn" data-toggle-more=".transcript-content"><i class="bi bi-chevron-down"></i> Show more</button>
+                </div>
+                <div class="tab-pane fade show active"
+                     id="summary-{{ note.id }}"
+                     role="tabpanel">
+                    <div class="content-section p-3 rounded markdown-content">{{ note.summary }}</div>
+                </div>
+                <div class="tab-pane fade"
+                     id="notes-{{ note.id }}"
+                     role="tabpanel">
+                    <div class="content-section p-3 rounded">
+                        {% if note.note %}
+                            {{ note.note }}
+                        {% else %}
+                            <em class="text-muted">No notes available yet.</em>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
