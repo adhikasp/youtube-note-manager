@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="YouTube Note - TV and Note">
+  <title>YouTube Note - TV and Note</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e74b5b"/>
+      <stop offset="100%" stop-color="#dc3545"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#g)"/>
+
+  <!-- TV body (bezel) -->
+  <rect x="8" y="12" width="48" height="36" rx="6" fill="#ffffff"/>
+  <!-- TV screen -->
+  <rect x="12" y="16" width="40" height="28" rx="4" fill="#b42030"/>
+  <!-- TV feet -->
+  <rect x="18" y="50" width="8" height="4" rx="2" fill="#ffffff"/>
+  <rect x="38" y="50" width="8" height="4" rx="2" fill="#ffffff"/>
+
+  <!-- Note inside the screen (dog-eared page) -->
+  <path d="M36 20 h10 l4 4 v12 h-14 z" fill="#ffffff"/>
+  <!-- Folded corner shading -->
+  <polygon points="46,20 50,24 46,24" fill="#b42030"/>
+  <!-- Note lines -->
+  <rect x="38" y="26" width="10" height="2" rx="1" fill="#b42030" opacity="0.9"/>
+  <rect x="38" y="30" width="8" height="2" rx="1" fill="#b42030" opacity="0.9"/>
+</svg>
+
