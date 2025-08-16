@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 from unittest.mock import patch, Mock
-from server import app
-from model import YouTubeNote
-from storage import get_db
+from youtube_note.server import app
+from youtube_note.model import YouTubeNote
+from youtube_note.storage import get_db
 
 client = TestClient(app)
 
@@ -22,8 +22,8 @@ def test_transcript_endpoint_renders_html_and_writes_db():
     fake_llm_response = Mock()
     fake_llm_response.content = "# Test Summary\n\n- Bullet 1\n- Bullet 2"
 
-    with patch("server.yt_client.fetch", return_value=fake_transcript), \
-         patch("server.chain.invoke", return_value=fake_llm_response):
+    with patch("youtube_note.server.yt_client.fetch", return_value=fake_transcript), \
+         patch("youtube_note.server.chain.invoke", return_value=fake_llm_response):
         response = client.post("/transcript", json={"youtube_url": fake_video_url})
         assert response.status_code == 200
         # Should return server-rendered HTML fragment (not JSON)
@@ -50,7 +50,7 @@ def test_transcript_endpoint_validates_input():
 
 def test_transcript_endpoint_handles_youtube_errors():
     fake_video_url = "https://www.youtube.com/watch?v=no-transcript"
-    with patch("server.yt_client.fetch", side_effect=Exception("Could not retrieve a transcript")):
+    with patch("youtube_note.server.yt_client.fetch", side_effect=Exception("Could not retrieve a transcript")):
         response = client.post("/transcript", json={"youtube_url": fake_video_url})
         assert response.status_code == 400
         assert "No transcript available" in response.text or "Failed to get transcript" in response.text
