@@ -148,7 +148,7 @@ async def get_transcript(request: Request, request_data: TranscriptRequest):
             db.refresh(new_note)
             note_obj = new_note
 
-    return templates.TemplateResponse("_note_card.html", {"request": request, "note": note_obj})
+    return templates.TemplateResponse(request, "_note_card.html", {"note": note_obj})
 
 @app.post("/summarize", response_model=SummaryResponse)
 async def summarize_transcript(request: SummaryRequest):
@@ -168,6 +168,6 @@ async def read_index(request: Request):
     with get_db() as db:
         all_notes = db.query(YouTubeNote).order_by(YouTubeNote.id.desc()).all()
 
-    return templates.TemplateResponse("index.html", {"request": request, "notes": all_notes})
+    return templates.TemplateResponse(request, "index.html", {"notes": all_notes})
 
 
