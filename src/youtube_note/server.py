@@ -64,7 +64,7 @@ class TranscriptItem(BaseModel):
 yt_client = YouTubeTranscriptApi()
 llm = init_chat_model(
     model_provider="openai",
-    model="gpt-5-chat",
+    model="google/gemini-2.5-flash",
     base_url="https://openrouter.ai/api/v1",
     api_key=os.getenv("openrouter_api_key"),
 )
