@@ -39,6 +39,15 @@ def extract_video_id(youtube_url: str) -> str:
 
     raise ValueError(f"Could not extract video ID from URL: {youtube_url}")
 
+def normalize_youtube_url(youtube_url: str) -> str:
+    """Normalize a YouTube URL to a canonical form to avoid duplicates.
+
+    Canonical form: https://www.youtube.com/watch?v=<VIDEO_ID>
+    This strips tracking parameters, timestamps, playlist refs, etc.
+    """
+    video_id = extract_video_id(youtube_url)
+    return f"https://www.youtube.com/watch?v={video_id}"
+
 class TranscriptRequest(BaseModel):
     youtube_url: str
 
@@ -89,6 +98,7 @@ templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "t
 async def get_transcript(request: Request, request_data: TranscriptRequest):
     try:
         video_id = extract_video_id(request_data.youtube_url)
+        normalized_url = normalize_youtube_url(request_data.youtube_url)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     try:
@@ -134,14 +144,14 @@ async def get_transcript(request: Request, request_data: TranscriptRequest):
         title_text = extract_title_from_summary(summary_text)
 
         new_note = YouTubeNote(
-            youtube_url=request_data.youtube_url,
+            youtube_url=normalized_url,
             title=title_text,
             transcript=transcript,
             summary=summary_text,
             note=""
         )
 
-        existing_note = db.query(YouTubeNote).filter(YouTubeNote.youtube_url == request_data.youtube_url).first()
+        existing_note = db.query(YouTubeNote).filter(YouTubeNote.youtube_url == normalized_url).first()
         if existing_note:
             existing_note.transcript = transcript
             existing_note.summary = summary_text

@@ -71,6 +71,24 @@ A simple web app to fetch YouTube transcripts, summarize them with an LLM, and l
   { "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }
   ```
 
+  URL normalization:
+  
+  - The server normalizes YouTube URLs to the canonical form `https://www.youtube.com/watch?v=<VIDEO_ID>` before storing and deduplicating notes.
+  - Tracking parameters, timestamps, and playlist references are ignored for de-duplication.
+  - Examples that resolve to the same video:
+    
+    ```
+    https://www.youtube.com/watch?v=wUrvXN-yiyo&t=3302s
+    https://youtu.be/wUrvXN-yiyo?si=abc
+    https://www.youtube.com/embed/wUrvXN-yiyo
+    ```
+    
+    All are stored as:
+    
+    ```
+    https://www.youtube.com/watch?v=wUrvXN-yiyo
+    ```
+
 Notes:
 - The transcript endpoint returns an HTML partial rendered from `_note_card.html` to keep the UI logic on the server.
 - If a note for the same URL already exists, it will be updated.
