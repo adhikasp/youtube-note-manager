@@ -75,16 +75,6 @@ Notes:
 - The transcript endpoint returns an HTML partial rendered from `_note_card.html` to keep the UI logic on the server.
 - If a note for the same URL already exists, it will be updated.
 
-### Development
-
-- Run locally:
-  
-  ```bash
-  poetry run uvicorn server:app --reload
-  ```
-
-- LLM model/provider is configured in `server.py` via LangChain with OpenRouter. Ensure your key is valid and rate limits are observed.
-
 ### Testing
 
 Run tests with:
