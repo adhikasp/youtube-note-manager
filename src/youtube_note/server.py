@@ -11,6 +11,7 @@ from langchain.chat_models import init_chat_model
 from langchain.prompts import ChatPromptTemplate
 import os
 import dotenv
+import youtube_transcript_api
 
 from .storage import get_db
 from .model import YouTubeNote
@@ -88,10 +89,16 @@ templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "t
 async def get_transcript(request: Request, request_data: TranscriptRequest):
     try:
         video_id = extract_video_id(request_data.youtube_url)
-        transcript_list: FetchedTranscript = yt_client.fetch(video_id=video_id)
-        transcript = "\n".join([f"[{int(item.start)//60:02d}:{int(item.start)%60:02d}] {item.text}"  for item in transcript_list])
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    try:
+        transcript: FetchedTranscript = yt_client.fetch(video_id=video_id)
+    except youtube_transcript_api._errors.NoTranscriptFound as e:
+        transcript_list = yt_client.list(video_id)
+        for t in transcript_list:
+            transcript= t.fetch()
+            if transcript:
+                break
     except Exception as e:
         logger.exception("Failed to get transcript")
         error_msg = f"Failed to get transcript: {str(e)}"
@@ -100,6 +107,8 @@ async def get_transcript(request: Request, request_data: TranscriptRequest):
         elif "Video unavailable" in str(e):
             error_msg = "Video is unavailable or does not exist."
         raise HTTPException(status_code=400, detail=error_msg)
+
+    transcript = "\n".join([f"[{int(item.start)//60:02d}:{int(item.start)%60:02d}] {item.text}"  for item in transcript])
 
     with get_db() as db:
         summary_response = chain.invoke({"transcript": transcript})
